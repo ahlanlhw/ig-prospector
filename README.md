@@ -1,4 +1,4 @@
-# Sprill: DM Read Rate Tracker
+# DM Read Rate Tracker
 
 A Chrome extension that shows which of your Instagram DMs were read.
 
