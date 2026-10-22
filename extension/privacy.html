@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sprill — Privacy Policy</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    max-width:760px;margin:0 auto;padding:32px 20px 64px;color:#1f2328;line-height:1.6;font-size:15px}
+  h1{font-size:24px;margin-bottom:4px}h2{font-size:17px;margin-top:28px}
+  .muted{color:#6b7280;font-size:13px}code{background:#f4f4f5;padding:1px 5px;border-radius:4px}
+  ul{padding-left:20px}li{margin:5px 0}
+</style>
+</head>
+<body>
+  <h1>Privacy Policy — Sprill</h1>
+  <p class="muted">Last updated: 28 July 2026 · Operated by Willow Tech</p>
+
+  <p>Sprill is a Chrome extension that helps businesses capture <strong>public</strong> Instagram
+  profiles, organize them, draft and send personalized outreach, and export your list. This policy
+  explains what the extension does and does not do with data. How much of the sending the software does
+  on your behalf depends on settings you control — see <strong>section 2 of the Terms</strong>.</p>
+
+  <h2>What the extension accesses</h2>
+  <ul>
+    <li><strong>Public profile information you choose to capture</strong> on Instagram pages you are viewing — handle, display name, bio, follower count, account type, category, public links, and any public contact shown.</li>
+    <li><strong>Handles collected during a recording session.</strong> If you start a session, then for the
+    duration you chose Sprill collects the handles and display names visible on the Instagram pages you
+    browse, without asking each time. It reads only what is already rendered on your screen, runs only on
+    <code>instagram.com</code>, stops on its own when the timer expires, and can be stopped early at any
+    time. It does not click, follow, message, or interact with anything while it does this.</li>
+    <li><strong>Public engagement numbers shown on a profile's post grid</strong> — the view, like and
+    comment counts and post dates Instagram already displays — so Sprill can compare an account's posts
+    against that same account's median and flag the ones that overperformed. It stores at most
+    <strong>two post links and their numbers per lead</strong>. It does not open posts, and it does not
+    store captions, images, or comments other people wrote.</li>
+    <li><strong>Content you create</strong> — your ideal-customer keywords, message templates, drafts, notes, and settings.</li>
+    <li><strong>Outreach you send through the tool</strong> — the message text, timestamp, and which of your
+    accounts sent it, so you can track it. This <strong>includes comments you post through Sprill</strong>:
+    the text, the link to the post, and which of your accounts posted it.</li>
+  </ul>
+
+  <h2>Pages Sprill opens for you</h2>
+  <p>Some features work by opening an Instagram page in a temporary browser tab, reading it, and closing
+  it again. This happens without a separate prompt each time, so you should know where it occurs:</p>
+  <ul>
+    <li><strong>Enriching a lead</strong> — opens a public profile in a background tab to read the bio and
+    score it. This runs automatically after a page scan (up to the "auto-enrich" number in Settings,
+    10 by default) and after a recording session.</li>
+    <li><strong>Checking read status</strong> — opens a message thread in a background tab to see whether a
+    message you sent has been read.</li>
+    <li><strong>One-click and batch send</strong> — if you enable them, opens a tab on the recipient's
+    profile, navigates to the message thread, and clicks Send.</li>
+  </ul>
+  <p>These tabs load public Instagram pages in your own browser under your own session, and are closed
+  immediately afterward. Nothing is sent to us.</p>
+  <p><strong>Finding a lead's best-performing posts opens nothing at all.</strong> It reads the numbers
+  already on the profile grid Sprill was looking at anyway — no extra page loads, no post pages.</p>
+
+  <h2>Where your data is stored</h2>
+  <p><strong>By default, all of your data stays local in your browser</strong> (Chrome's extension storage on
+  your device). Sprill works fully offline, with no account and no server involved.</p>
+  <p>Three features send data off your device. All are <strong>optional and off until you turn them on</strong>:</p>
+  <ul>
+    <li><strong>Google sign-in &amp; Sheets export.</strong> Signs you in with Google and writes your list to a
+    spreadsheet that Sprill creates in <em>your own</em> Google Drive. We request only the
+    <code>drive.file</code> scope, which limits Sprill to files it created itself — it cannot read your
+    other Drive documents.</li>
+    <li><strong>Cloud backup.</strong> If you choose “Back up to cloud”, a copy of your settings, captured
+    prospects, and outreach log is written to a Firebase Firestore database operated by Willow Tech,
+    stored under your own signed-in user id. Security rules restrict every record to the user who
+    created it, so no other user can read your data. This is a push-only backup so you can restore your
+    own list; we do not analyse it, share it, or use it for any other purpose.</li>
+    <li><strong>Shared lead lists.</strong> If you create or join a shared list, the lead details you push to it
+    (handle, profile URL, public profile information, score, and which of your accounts captured it) are
+    written to the same Firebase Firestore database and become readable by <em>every member of that
+    list</em>. Your messages, outreach history, follow-up schedule, and per-lead status are never shared.
+    Membership works by share code: <strong>anyone who has the code can join the list and read what is in
+    it</strong>, so only share a code with people you intend to give access to. Members cannot be removed
+    individually — to cut off access, create a new list. Leaving a list on your device does not delete
+    leads you already pushed to it.</li>
+  </ul>
+
+  <h2>What we do NOT collect or do</h2>
+  <ul>
+    <li>We never ask for or store your Instagram <strong>password</strong>.</li>
+    <li>We never read, export, or transmit your Instagram <strong>session cookies or tokens</strong>.</li>
+    <li>We do not collect <strong>private-account content</strong> or private messages you didn't send through the tool.</li>
+    <li>We do not read or store <strong>comments other people wrote</strong>, or the content of any post.</li>
+    <li>We do not track your general browsing history.</li>
+    <li>Recording sessions never run outside <code>instagram.com</code>, never read private accounts,
+    direct messages, or anything beyond the public handles and profile fields listed above — and never
+    run unless you started one.</li>
+    <li>We do not sell your data, and we do not use it for advertising.</li>
+  </ul>
+
+  <h2>Data you send to third parties (only if you enable it)</h2>
+  <p>If you enable the optional <strong>Google Sheets export</strong>, data is sent only to the
+  destination <strong>you specify</strong> — your own Google Sheet. You control that connection and
+  can remove it at any time. CSV export writes a file to your own device and sends nothing
+  anywhere.</p>
+
+  <h2>Your controls</h2>
+  <ul>
+    <li><strong>Delete everything locally:</strong> Settings → “Clear all data” removes all stored data immediately.</li>
+    <li><strong>Uninstalling</strong> the extension removes its local data from your browser.</li>
+    <li><strong>Disconnect Google:</strong> Settings → “Sign out” revokes Sprill's stored token. You can also
+      remove its access at <code>myaccount.google.com/permissions</code>.</li>
+    <li><strong>Delete your cloud backup:</strong> use the Contact link on <strong>sprill.app</strong>, from the address you
+      signed in with and we will delete your stored copy. Note that uninstalling the extension does
+      <em>not</em> by itself remove a backup you previously pushed.</li>
+    <li><strong>Delete a shared list:</strong> the list's creator can delete it. If you are a member but not the
+      creator, use the Contact link on <strong>sprill.app</strong>, from the address you signed in with and we will remove
+      the leads you contributed.</li>
+  </ul>
+
+  <h2>How long data is kept</h2>
+  <ul>
+    <li><strong>On your device:</strong> data stays until you delete it — there is no expiry and nothing is
+    removed automatically. Uninstalling the extension removes it.</li>
+    <li><strong>Recording sessions:</strong> collected handles are held in a temporary staging area only until
+    the session is evaluated or discarded, then cleared. A session left unevaluated for more than 24 hours
+    is discarded automatically, along with everything it collected.</li>
+    <li><strong>Cloud backup and shared lists:</strong> kept until you ask us to delete them, using the controls
+    above. We do not delete them on a schedule, because they exist so you can restore your own list later.</li>
+  </ul>
+
+  <h2>Your responsibility</h2>
+  <p>You are responsible for using the tool lawfully and in line with Instagram's terms and applicable
+  privacy/marketing laws in your jurisdiction, including only contacting people for legitimate business
+  purposes and honoring opt-out requests.</p>
+
+  <h2>Contact</h2>
+  <p>Questions or data requests: use the Contact link on <strong>sprill.app</strong>.</p>
+</body>
+</html>

@@ -1,0 +1,53 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+*.pem
+*.key
+*.p12
+*.pfx
+service-account*.json
+apibank/
+
+# Dependencies / build output
+node_modules/
+dist/
+build/
+
+# Python cache
+__pycache__/
+
+# Chrome Web Store upload packages
+*.zip
+*.crx
+
+# Firebase local state
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# OS / editor cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Patch files handed over from a Cowork session — transient, not source.
+*.patch
+
+# Scratch folders parked for deletion (this bridge cannot rm).
+_to_delete/
+
+# Per-machine Cowork/Claude Code session settings.
+.claude/settings.local.json
+
+# Transient repo snapshots handed to a Cowork session.
+repo-snapshot.tar
+
+# Local integration config (Google OAuth client id, Firebase web config).
+# Copy extension/src/shared/config.local.example.js to set it up.
+extension/src/shared/config.local.js

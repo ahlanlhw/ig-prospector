@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Sprill: DM Read Rate Tracker",
+  "version": "0.18.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmK2CVPB8UyF/JoPjVO+O33RzFwwutgD9rPdAxUXQAJ4SnH7YtFhyLZOftpgyltlGCwx9iusk8RDp4RLPm8Q1lkojG81CxaTEoy0bfbIZsOYqODSqdZ4LcUFRSnPF8zLCwbemEToo5GuK8IuifIMuPjLnQ4AUAG58UzuMXy7JCINU+8A0kAum8a/kC3tYy3Q2Dbi0UakkH+Bc362t0/P/pPOLSjOc1FpaMFck7QlZ55l7dQ8pd2xwK3sItNKOn01ii1dD78LrzJHL1L5+aoPvLZsTgVoywe38gOfaXQWNwB4VAZUj6byEDjMZ+CivAZJBb7NsPXs2IbXN94Iwz+xxsQIDAQAB",
+  "description": "Confirm every DM and comment you send on instagram.com, then track which ones were read and which got replies. No bulk sending.",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://www.instagram.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://sheets.googleapis.com/*",
+    "https://firestore.googleapis.com/*",
+    "https://identitytoolkit.googleapis.com/*",
+    "https://www.googleapis.com/*",
+    "https://oauth2.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Sprill: open panel"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/panel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.instagram.com/*"
+      ],
+      "js": [
+        "src/content/instagram.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

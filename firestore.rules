@@ -1,0 +1,157 @@
+rules_version = '2';
+
+// IG Prospector — Firestore security rules.
+//
+// This is the PRIMARY control that prevents unauthorized use of the project,
+// even though the Firebase web apiKey is public by design (it ships in the
+// extension and Google documents it as safe to embed — access is gated here,
+// not by hiding the key).
+//
+// Model: a signed-in user can read/write ONLY their own subtree under
+// users/{uid}. Every other path is denied to everyone. There is no public,
+// unauthenticated, or cross-user access anywhere.
+//
+// Deploy: Firebase console → Firestore Database → Rules → paste this whole file
+// → Publish. (Or `firebase deploy --only firestore:rules` once a firebase.json
+// exists.) Re-check after any data-model change.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A user owns exactly their own tree: prefs (users/{uid}),
+    // prospects (users/{uid}/prospects/{id}) and outreach (users/{uid}/outreach/{id}).
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+    }
+
+    // ---- Shared lead lists (cross-account sharing) --------------------------
+    //
+    // Model: "anyone with the code". The listId is a 20-char random id minted
+    // client-side and IS the capability token — you share the code out of band,
+    // and whoever holds it can join. There is no backend, so there is no way to
+    // resolve an email to a uid and issue a per-person invite.
+    //
+    // Accepted, deliberate tradeoffs (surfaced in the UI, not hidden):
+    //   • Anyone who obtains the code can join the list.
+    //   • Removing one member means rotating the list (make a new one).
+    //   • The list document itself is readable by any signed-in user who knows
+    //     the id — joining requires reading it. It holds only a name, an owner
+    //     uid and member uids. THE LEAD DATA IS NOT THERE: prospects live in a
+    //     subcollection that is members-only (below). That is the boundary that
+    //     actually matters.
+
+    function listData(listId) {
+      return get(/databases/$(database)/documents/lists/$(listId)).data;
+    }
+    function isMember(listId) {
+      return request.auth != null
+             && request.auth.uid in listData(listId).memberUids;
+    }
+    // A non-owner may only ever add THEMSELVES, and touch nothing else.
+    function isSelfJoin() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids'])
+             && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+             && !(request.auth.uid in resource.data.memberUids);
+    }
+    // ...and may always drop themselves again. Self-removal only ever reduces
+    // the caller's own access, so it needs no further restriction — and without
+    // it, "leave" could only be faked locally and would reappear on the next
+    // refresh, since the uid would still be in memberUids server-side.
+    function isSelfLeave() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids'])
+             && request.auth.uid in resource.data.memberUids
+             && request.resource.data.memberUids == resource.data.memberUids.removeAll([request.auth.uid]);
+    }
+
+    match /lists/{listId} {
+      // get (fetch one by id) is open to signed-in users because joining by
+      // code requires reading the doc you were handed.
+      //
+      // list (query the collection) is deliberately NOT open: a blanket
+      // `allow read` would let any signed-in user enumerate every list in the
+      // project and then join them all, which would defeat the whole
+      // capability-token model. Requiring membership in the rule means only a
+      // query constrained to `memberUids array-contains <me>` is accepted —
+      // that's how "my lists" works, and an unconstrained query is rejected.
+      allow get: if request.auth != null;
+      allow list: if request.auth != null
+                  && request.auth.uid in resource.data.memberUids;
+
+      allow create: if request.auth != null
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.memberUids == [request.auth.uid];
+
+      allow update: if request.auth != null
+                    && (resource.data.ownerUid == request.auth.uid
+                        || isSelfJoin() || isSelfLeave());
+
+      allow delete: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
+
+      // The actual leads. Members only — this is the real access boundary.
+      //
+      // `allow read, write: if isMember(listId)` was too coarse, and the gap was
+      // not theoretical. `write` covers create, update AND delete, with no field
+      // allowlist and no ownership check, so ANY member could:
+      //
+      //   1. Delete every lead in the list, with no audit trail (sharedBy is set
+      //      by the client and was never enforced here).
+      //   2. Poison other members' LOCAL CRMs. pullFromList() strips only
+      //      id/sharedBy/sharedAt and merges the rest into the local record by
+      //      username, so a member could rewrite an existing local lead's
+      //      profileUrl or outlierTopUrl — which the panel then hands straight to
+      //      chrome.tabs.update()/create(). chrome:// and javascript: are blocked
+      //      by Chrome, so that is phishing-grade rather than code execution, but
+      //      it is still a remote party choosing where a trusted UI navigates.
+      //
+      // Fixed below. Note the client must ALSO treat pulled fields as untrusted —
+      // rules protect this collection, not the local store.
+      //
+      // Kept in force even though the feature is gated off in v1 (flags.js
+      // `lists`), because these rules are already published to the project and
+      // anyone who created a list on 0.11.0 still has one.
+      match /prospects/{docId} {
+        // Exactly SHARED_FIELDS from lists.js, plus the two provenance stamps.
+        // A field added to lists.js must be added here or the write is rejected —
+        // which is the intended direction of failure.
+        function allowedFields() {
+          return [
+            'userId', 'username', 'displayName', 'profileUrl', 'accountType', 'category',
+            'bio', 'followers', 'following', 'posts', 'verified', 'score', 'band',
+            'linkInBio', 'links', 'emails', 'phones', 'businessSignals',
+            'sourceType', 'sourceUrl', 'sourceAccount', 'capturedAt',
+            'outlierCount', 'outlierTopRatio', 'outlierTopUrl', 'outlierCheckedAt',
+            'sharedBy', 'sharedAt'
+          ];
+        }
+        // sharedBy must be the caller. This is what makes the delete rule below
+        // meaningful — without it, provenance is a self-reported string.
+        function isOwnContribution() {
+          return request.resource.data.sharedBy == request.auth.uid
+                 && request.resource.data.keys().hasOnly(allowedFields())
+                 && request.resource.data.keys().hasAll(['username', 'sharedBy']);
+        }
+
+        allow read: if isMember(listId);
+        allow create: if isMember(listId) && isOwnContribution();
+        // A member may correct a lead THEY contributed. Re-pushing someone else's
+        // lead is a no-op rather than an overwrite, which is the safe default for
+        // a shared list: stale beats silently rewritten by a third party.
+        allow update: if isMember(listId)
+                      && isOwnContribution()
+                      && resource.data.sharedBy == request.auth.uid;
+        // You can withdraw your own contributions. You cannot empty someone
+        // else's list.
+        allow delete: if isMember(listId) && resource.data.sharedBy == request.auth.uid;
+      }
+    }
+
+    // Default deny. Any path not matched above is unreadable and unwritable.
+    // (Unmatched paths are already denied by Firestore; this makes it explicit
+    // so a future rule can't accidentally widen access.)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

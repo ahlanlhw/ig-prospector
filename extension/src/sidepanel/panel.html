@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sprill</title>
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">SPRILL</div>
+    <div id="quota" class="quota" title="Free tier: 5 DMs/day, 30/month">– / 5 today</div>
+    <div id="quota-comments" class="quota" title="Comments: 10/day, 60/month — a separate budget from DMs" hidden>– / 10</div>
+  </header>
+
+  <nav class="tabs">
+    <!-- The funnel, left to right: look at a profile, queue it, then work it.
+         Shortlist, Outreach and Metrics were three tabs describing the same people
+         at three moments — who I vetted, who I messaged, how it went. They are one
+         Pipeline tab now, where the state is on the ROW (★ vetted, ☑ messaged) and
+         the counts are one strip at the top. Queue stays separate on purpose: it is
+         the only structural guarantee that nobody gets messaged before a human
+         looked at them — see the note above #tab-queue. -->
+    <button class="tab is-active" data-tab="profile">Profile</button>
+    <button class="tab" data-tab="queue">Queue</button>
+    <button class="tab" data-tab="pipeline" id="tab-btn-pipeline">Pipeline</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+
+  <div id="account-bar" class="account-bar" title="The Instagram account messages are sent from">Account: checking…</div>
+
+  <main>
+    <!-- PROFILE — the page you are looking at right now (was "Current" before 0.16.0). -->
+    <section id="tab-profile" class="tabpanel is-active">
+      <div id="current-body">
+        <div class="empty">Open an Instagram profile to get started.</div>
+      </div>
+    </section>
+
+    <!-- QUEUE -->
+    <section id="tab-queue" class="tabpanel">
+      <div class="row-between">
+        <div class="muted" id="queue-count">0 saved</div>
+        <button id="scan-btn" class="btn ghost sm" title="Capture handles visible on this page">Scan page</button>
+      </div>
+
+      <!-- EXPLORE SEARCH — /explore/search/keyword/?q=… renders the same post-tile
+           grid as /explore/, and /explore/tags/<tag>/ just redirects into it, so a
+           leading # needs no special case. Resolving a tile to its author costs one
+           paced request, so this is bounded and reports what it couldn't read. -->
+      <div class="row-gap">
+        <input id="explore-q" class="inline" type="search" placeholder="social media manager"
+               title="Search Explore for a keyword or #tag, then scan the grid">
+        <button id="explore-btn" class="btn ghost sm">Scan explore</button>
+      </div>
+      <p class="fine" id="scan-progress">A fresh Explore search shows only a few posts until you
+      scroll. For more than a handful, start a recording below and scroll the grid.</p>
+
+      <!-- RECORDER — realtime harvesting. ON since 0.11.0 (FLAGS.recorder). The
+           hidden attribute is cleared by wireRecorder(); the flag check remains
+           so the card can be staged off again without touching this markup. -->
+      <div id="rec-card" class="rec-card" hidden>
+        <div class="row-between">
+          <b>Record a session</b>
+          <span id="rec-state" class="muted">Ready</span>
+        </div>
+        <p class="fine">Start the timer, then browse Instagram normally — followers lists, explore,
+        search, comments. Sprill collects the handles it sees. When time's up it evaluates them.</p>
+
+        <div id="rec-idle" class="row-gap">
+          <select id="rec-duration" class="inline" title="Wall-clock time, not time spent browsing"></select>
+          <button id="rec-start" class="btn sm">● Record</button>
+        </div>
+
+        <div id="rec-live" hidden>
+          <div class="rec-bar"><i id="rec-fill"></i></div>
+          <div class="row-between">
+            <div class="muted"><span id="rec-left">–:–</span> left · <b id="rec-found">0</b> found</div>
+            <button id="rec-stop" class="btn ghost sm">■ Stop</button>
+          </div>
+        </div>
+
+        <div id="rec-pending" hidden>
+          <div id="rec-summary" class="muted"></div>
+          <div class="row-gap">
+            <select id="rec-cap" class="inline" title="How many to open and score now"></select>
+            <button id="rec-evaluate" class="btn sm">Evaluate</button>
+            <button id="rec-stop-burst" class="btn ghost sm" hidden>Stop</button>
+            <button id="rec-discard" class="btn ghost sm">Discard</button>
+          </div>
+        </div>
+
+        <div id="rec-progress" class="muted"></div>
+
+        <!-- POST-HARVEST CULL. The bound filters above are a view — they hide rows
+             and never touch the store, which is right for a queue you work down and
+             useless for a harvest. This applies the SAME filters to what this
+             session found. Never automatic: leads a burst couldn't load have no
+             counts and would fail every bound, so removal is always a press. -->
+        <button id="rec-cull" class="btn ghost sm danger" hidden>Remove the 0 that don’t match</button>
+
+        <p class="fine warn">Evaluating opens each profile in a background tab. Keep the batch
+        small — rapid automated page loads are exactly the pattern Instagram rate-limits.</p>
+      </div>
+      <!-- OUTLIER FILTER. An account whose recent reels are beating its OWN median
+           is an account on the way up, and that is a better prospect than one with
+           a bigger but flat audience. The numbers are already stored per account
+           (outlierCount / outlierTopRatio); this is the control that makes them
+           usable instead of decorative.
+           "Not checked" is not a failure state — outliers are only computed during
+           Enrich, so a freshly scanned handle legitimately has no verdict yet. -->
+      <!-- Filters are BUILT in JS from one table (NUM_FILTERS / BANDS in panel.js).
+           Queue and Pipeline must offer identical filters, and two hand-written
+           copies of five <select>s is exactly how they stop being identical. -->
+      <div class="row-gap filt-row" id="q-filters"></div>
+
+      <label class="sel-all"><input type="checkbox" id="sel-all" /> <span id="sel-count">0 selected</span></label>
+      <!-- Batch SEND is deliberately not here — it lives in the Pipeline's "to
+           message" segment, because you should not be able to bulk-message people
+           nobody has looked at. The bulk action on this tab is promotion, not
+           outreach. -->
+      <div class="row-gap" style="margin-bottom:8px; flex-wrap:wrap">
+        <button id="shortlist-btn" class="btn sm" title="Vet the ticked handles into the Pipeline, ready to message">★ Shortlist selected</button>
+        <button id="enrich-btn" class="btn ghost sm" title="Open selected profiles to fetch bio, score and reel outliers">Enrich selected</button>
+        <button id="export-btn" class="btn ghost sm">Export</button>
+        <button id="import-btn" class="btn ghost sm" title="Import leads from a CSV with a username or profileUrl column — or a plain .txt with one handle per line">Import CSV</button>
+        <button id="template-btn" class="btn ghost sm" title="Download a starter CSV — or just put one handle per line in a .txt">Template</button>
+        <input type="file" id="import-file" accept=".csv,.txt,text/csv,text/plain" hidden />
+        <button id="removesel-btn" class="btn ghost sm danger">Remove</button>
+      </div>
+      <div id="batch-progress" class="muted"></div>
+      <div id="queue-list"></div>
+      <button id="queue-more" class="btn ghost sm" hidden>Show more</button>
+    </section>
+
+    <!-- PIPELINE — Shortlist, Outreach and Metrics, merged (0.16.0).
+         They were three tabs describing the same people at three moments: who I
+         vetted, who I messaged, and how it went. Splitting them meant the answer to
+         "should I nudge this person" lived in one tab, the evidence in another, and
+         the score in a third.
+         One list now, where state lives on the ROW — ★ vetted, ☑ messaged, plus a
+         read chip — and the counts are one strip at the top that doubles as the
+         segment filter. The raw log stays collapsed underneath. -->
+    <section id="tab-pipeline" class="tabpanel">
+      <!-- The stat strip. Icon + number, and a dash when there is nothing to say,
+           because a row of zeroes reads as failure while a dash reads as "not yet".
+           Each chip is also the segment filter for the list below. -->
+      <div id="pl-stats" class="pl-stats"></div>
+
+      <div class="row-between">
+        <div class="muted" id="pl-count">Nothing shortlisted yet</div>
+        <button id="pl-export" class="btn ghost sm">Export CSV</button>
+      </div>
+      <p class="fine" id="pl-blurb">Vetted by you, not yet messaged. A lead keeps its place here once
+      you send — the ☑ tells you it went, and the chip tells you what happened next. Only <b>DMs</b>
+      get a read state; Instagram gives comments no read receipt.</p>
+
+      <div class="row-gap" style="flex-wrap:wrap">
+        <button id="refresh-status" class="btn ghost sm" title="Open sent threads to detect 'Seen'">↻ Refresh read status</button>
+        <button id="pl-cull" class="btn ghost sm" title="Review leads that have gone quiet or stale">🧹 Clean up…</button>
+      </div>
+      <div id="fu-progress" class="muted"></div>
+      <div id="pl-cull-box" class="card" hidden></div>
+
+      <!-- TOP PERFORMING REELS. Separate from the filter because it answers a
+           different question: the filter picks WHO to message, this shows WHAT is
+           working, which is what you reference in the message. -->
+      <details id="sl-outliers" class="card">
+        <summary><b>Top performing reels</b> <span id="sl-outlier-count" class="pill">0</span></summary>
+        <p class="fine">Posts that beat their own account's median by the widest margin. Read-only —
+        these never affect a fit score. Read when you capture a profile, and re-checked during Enrich.</p>
+        <div id="sl-outlier-list"></div>
+      </details>
+
+      <div class="row-gap filt-row" id="sl-filters"></div>
+
+      <label class="sel-all"><input type="checkbox" id="sl-sel-all" /> <span id="sl-sel-count">0 selected</span></label>
+      <div id="batch-bar" class="batch-bar">
+        <select id="batch-template" class="inline" title="Template used for the selected handles"></select>
+        <button id="batch-send" class="btn send sm">Confirm &amp; Send selected (0)</button>
+        <button id="batch-stop" class="btn ghost sm" style="display:none">Stop</button>
+      </div>
+      <div class="row-gap" style="margin-bottom:8px; flex-wrap:wrap">
+        <button id="sl-draft" class="btn ghost sm">Draft selected</button>
+        <button id="sl-unshortlist" class="btn ghost sm" title="Send them back to the Queue">← Back to Queue</button>
+        <button id="sl-remove" class="btn ghost sm danger">Remove</button>
+      </div>
+      <div id="sl-progress" class="muted"></div>
+      <div id="pipeline-list"></div>
+      <button id="sl-more" class="btn ghost sm" hidden>Show more</button>
+
+      <details id="sent-log" class="card">
+        <summary><b>Message log</b> <span id="sent-log-count" class="pill">0</span></summary>
+        <p class="fine">Every DM and comment you've sent through Sprill, newest first, with the text
+        and the account it went from.</p>
+        <div id="sent-list"></div>
+      </details>
+
+      <details id="pl-metrics" class="card">
+        <summary><b>Full metrics</b></summary>
+        <div id="metrics-body"></div>
+      </details>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tabpanel">
+      <div class="card about">
+        <b>What Sprill is</b>
+        <p class="fine">Tells you which of your DMs were actually <b>read</b>. Instagram files a
+        message from someone who doesn't follow you into a Requests folder and notifies nobody, so
+        silence tells you nothing. Sprill reads Instagram's own &ldquo;Seen&rdquo; marker on the
+        threads you sent and separates <b>read and ignored</b> from <b>never opened</b> — opposite
+        problems with opposite fixes. It also scores public profiles against keywords you set, and
+        drafts each message for you to confirm.</p>
+        <p class="fine warn"><b>What it's not:</b> not a bulk-DM bot. No identical blasts, and sending
+        never runs unattended — you confirm the content and the recipient of every message, one at a
+        time, capped at 5 DMs and 10 comments a day.</p>
+        <p class="fine">Sprill reads the same &ldquo;Seen&rdquo; marker Instagram already shows you.
+        It cannot see which folder a message landed in, and Instagram exposes no delivery signal —
+        so &ldquo;read&rdquo; and &ldquo;not read yet&rdquo; are the only two states we report.</p>
+        <p class="fine">Sprill is an independent tool, not affiliated with, endorsed by, or sponsored
+        by Instagram or Meta Platforms, Inc.</p>
+        <div class="row-gap">
+          <button id="open-privacy" class="btn ghost sm">Privacy</button>
+          <button id="open-terms" class="btn ghost sm">Terms</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row-between"><b>Account &amp; sync</b><span id="acct-status" class="muted">Local only</span></div>
+        <p class="fine">Sign in with Google to export straight to a Google Sheet and (optional) back up your data. Data stays local until you do.</p>
+        <div class="row-gap" style="flex-wrap:wrap">
+          <button id="google-connect" class="btn sm">Connect Google</button>
+          <button id="sheet-export" class="btn ghost sm">Export to Google Sheet</button>
+          <button id="cloud-sync" class="btn ghost sm">Back up to cloud</button>
+          <button id="google-signout" class="btn ghost sm">Sign out</button>
+        </div>
+        <p id="acct-note" class="fine"></p>
+      </div>
+
+      <!-- SHARED LEAD LISTS — CUT FROM v1.
+           Gated behind flags.js `lists` (build: false) as of 0.12.0. Two reasons,
+           either of which is sufficient:
+             1. Policy. The Chrome Web Store Limited Use tightening effective
+                1 Aug 2026 requires collected data to be "strictly necessary to
+                the extension's disclosed single purpose". This feature is
+                user-to-user transfer of NON-CONSENTING third parties' bios,
+                emails and phone numbers between unrelated accounts. That is the
+                hardest thing in this product to defend under that clause.
+             2. Security. `lists/{id}/prospects/{doc}` currently grants any member
+                unconstrained write — so one member can delete every lead in the
+                list, or overwrite another member's LOCAL records (including
+                profileUrl, which the panel then navigates to). firestore.rules
+                needs a field allowlist and a sharedBy ownership check before this
+                ships. See PLAN_v2.md.
+           The code stays; only the entry point is gated. -->
+      <div class="card" id="sharing-card" hidden>
+        <div class="row-between"><b>Shared lead lists</b><span id="sharing-status" class="muted">—</span></div>
+        <p class="fine">Share leads with a teammate or across your own accounts. Create a list, send them the code,
+        and you can both push and pull leads from it.</p>
+        <p class="fine warn"><b>Anyone with the code can join</b>, and members can't be removed one by one —
+        to cut someone off, make a new list. Only the lead details are shared, never your messages,
+        outreach history or follow-up schedule.</p>
+        <div class="row-gap" style="flex-wrap:wrap">
+          <input id="list-name" type="text" placeholder="List name" class="inline" />
+          <button id="list-create" class="btn sm">Create list</button>
+        </div>
+        <div class="row-gap" style="flex-wrap:wrap; margin-top:8px">
+          <input id="list-code" type="text" placeholder="Paste a 20-character code" class="inline" />
+          <button id="list-join" class="btn ghost sm">Join</button>
+        </div>
+        <div id="list-container"></div>
+      </div>
+
+      <div class="field">
+        <!-- The "only public accounts" toggle was removed in 0.13.0 — it is now a
+             rule with no exception. See store.js:failsPublicFilter for why a
+             switch was the wrong shape: it made a listing claim conditional. -->
+        <p class="fine"><b>Public accounts only.</b> Private accounts are refused at capture,
+        refused when shortlisting, and deleted when a scanned handle turns out to be private.
+        There is no setting, because there is no case where collecting a private account is
+        useful — there is no bio, no follower count and no contact route to read.</p>
+      </div>
+      <label class="field">
+        <span>Minimum gap between sends (safety pacing)</span>
+        <select id="pace-min" class="inline"></select>
+      </label>
+      <label class="field">
+        <span>Auto-enrich after scan (opens top N profiles to get type + score)</span>
+        <select id="auto-enrich" class="inline"></select>
+      </label>
+
+      <div class="card warm">
+        <div class="row-between"><b>Warm-up</b><span id="warm-streak" class="chip">🔥 0-day streak</span></div>
+        <div id="warm-bars" class="warm-bars"></div>
+        <div class="muted" id="warm-today">Today: 0</div>
+        <label class="field" style="margin:10px 0 0">
+          <span>Daily target — send consistently to warm the account</span>
+          <select id="daily-target" class="inline"></select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Your business (used in drafts)</span>
+        <input id="biz-name" type="text" placeholder="e.g. Willow Tech" />
+      </label>
+
+      <label class="field">
+        <span>Ideal prospect — keywords (comma separated)</span>
+        <textarea id="icp-keywords" rows="3" placeholder="agency, d2c, performance marketing, founder, singapore"></textarea>
+      </label>
+
+      <label class="field">
+        <span>Describe your ideal prospect (optional)</span>
+        <textarea id="icp-desc" rows="2" placeholder="Founder-led marketing agencies in SEA who run paid social for D2C brands."></textarea>
+      </label>
+      <button id="save-icp" class="btn sm">Save targeting</button>
+
+      <hr />
+      <div class="field">
+        <span>Message templates</span>
+        <div id="template-list"></div>
+        <label class="sub">Default for new drafts
+          <select id="tpl-default" class="inline"></select>
+        </label>
+        <p class="fine">Every draft box opens on this. Pick a DM template you send most,
+        or leave it on the auto opener.</p>
+        <div class="tpl-editor">
+          <input id="tpl-id" type="hidden" />
+          <input id="tpl-name" type="text" placeholder="Template name (e.g. Warm intro)" />
+          <select id="tpl-kind" class="inline">
+            <option value="dm">Direct message</option>
+            <option value="comment">Comment</option>
+          </select>
+          <textarea id="tpl-body" rows="3" placeholder="Hi {first_name} — I liked {topic}. Open to a quick chat?"></textarea>
+          <p class="fine">Merge fields: {first_name} {name} {handle} {followers} {category} {topic} {business} {link}</p>
+          <p class="fine warn">Comment templates are public. Keep them short and specific to the
+          post — no pitch, no link, no call to action. That belongs in the DM afterwards.</p>
+          <div class="row-gap">
+            <button id="tpl-save" class="btn sm">Save template</button>
+            <button id="tpl-clear" class="btn ghost sm">New</button>
+          </div>
+        </div>
+      </div>
+
+      <hr />
+      <div class="field">
+        <span>CSV columns</span>
+        <div id="csv-fields" class="chips"></div>
+      </div>
+
+      <hr />
+      <div class="field">
+        <span>Follow-up cadence</span>
+        <select id="followup-days" class="inline"></select>
+        <p class="fine">After each send, a follow-up is scheduled this many days later; due ones surface in the Outreach tab.</p>
+      </div>
+
+      <!-- OUTBOUND WEBHOOK — REMOVED in 0.13.0.
+           It was the ONLY consumer of `optional_host_permissions: https://*/*`,
+           which STORE_ELIGIBILITY.md flags as the single broadest thing in the
+           manifest and the one most likely to slow a review. Removing the feature
+           removes the permission, so the manifest now asks for instagram.com plus
+           five named Google API hosts and nothing else.
+           CSV and Google Sheets remain as the generic export paths. -->
+
+      <hr />
+      <div class="field">
+        <label class="switch-row">
+          <input id="one-click" type="checkbox" />
+          <span>Send from this panel <b>(opt-in)</b> — you confirm the message and the recipient here, then Sprill sends it without the manual composer step</span>
+        </label>
+        <p class="fine warn"><b>Off by default — we recommend leaving it off.</b> Instagram's Terms
+        prohibit automated interaction. Accounts that automate sending can be <b>action-blocked,
+        restricted, or permanently banned</b>. Detection is behavioural — send velocity, regular
+        intervals, cold recipients — so low volume and pacing reduce the risk but never remove it.
+        Every send is still one deliberate click and sends are paced, but <b>your account is your
+        responsibility</b>. Insert-only is the safer default: Sprill puts the text in the composer
+        and you press Send yourself.</p>
+      </div>
+
+      <div class="field">
+        <label class="switch-row">
+          <input id="auto-comment" type="checkbox" />
+          <span>Auto-post comments <b>(opt-in)</b> — posts your comment on the open post, no manual step</span>
+        </label>
+        <p class="fine warn"><b>Off by default.</b> A comment is <b>public and attached to your
+        name</b> — if Sprill posts the wrong text, or on the wrong post, everyone who follows that
+        account can see it. Automated commenting is one of the patterns Instagram enforces against
+        hardest: accounts get <b>comment-blocked, shadow-limited, or banned</b>. Insert-only is the
+        safer default — Sprill fills the box and you press Post. There is no batch comment mode.</p>
+      </div>
+
+      <!-- The realtime-harvesting toggle lived here as a normal setting. Removed in
+           0.13.0: it was a second, redundant off-switch. Harvesting is already
+           opt-in per session — nothing is collected until you press ● Record in the
+           Queue tab, and it stops when the timer ends. A toggle that only disables
+           a button you have to press anyway is not a privacy control; it implies
+           the feature runs on its own, which is worse than not having it.
+
+           What replaces it is generic and hidden: tap the wordmark five times and
+           every flag in flags.js gets a row here. That is the only way to dogfood
+           a flag that ships OFF — `lists` needs it (TESTING.md §23), and hardcoding
+           one row per flag is how the old version ended up stale. -->
+      <div class="field" id="flag-row" hidden>
+        <hr />
+        <b>Staged features</b>
+        <p class="fine">Development only. These are not part of the shipped product and are not
+        described on the store listing.</p>
+        <div id="flag-list"></div>
+      </div>
+
+      <hr />
+      <div class="field">
+        <span>Sends this month</span>
+        <div id="usage-detail" class="muted">–</div>
+      </div>
+      <div class="row-gap">
+        <!-- "Reset counters (test)" removed in 0.12.0. resetUsage() is kept in
+             store.js behind the flags registry for dogfooding. A button that
+             resets your send counter, sitting next to an advertised cap, reads to
+             a reviewer as a straight bypass of the limit we advertise — and
+             becomes one the moment the cap is what someone is paying to raise. -->
+        <button id="clear-all" class="btn ghost sm danger">Clear all data</button>
+      </div>
+      <div class="row-gap"><button id="rerun-onboarding" class="btn ghost sm">Re-run setup</button></div>
+      <p class="fine">Runs fully local — no account or keys required. Scoring and drafts use a transparent local method, not an AI model. Google sign-in is optional and only adds Sheets export + cloud backup.</p>
+    </section>
+  </main>
+
+  <!-- FIRST-RUN ONBOARDING (overlay; shown only until completed/skipped) -->
+  <div id="onboarding" class="ob" hidden>
+    <div class="ob-card">
+      <div class="ob-dots" id="ob-dots"></div>
+
+      <section class="ob-step is-active" data-step="1">
+        <h2>Who are you looking for?</h2>
+        <p class="ob-lede">Pick the closest match. This sets your starting keywords so profiles
+        get scored immediately — you can change them any time in Settings.</p>
+        <div id="ob-presets" class="ob-presets"></div>
+      </section>
+
+      <section class="ob-step" data-step="2">
+        <h2>What's your business called?</h2>
+        <p class="ob-lede">Used in message drafts wherever <code>{business}</code> appears.</p>
+        <input id="ob-biz" type="text" placeholder="e.g. Willow Tech" />
+        <div class="ob-nav">
+          <button id="ob-back" class="btn ghost sm">Back</button>
+          <button id="ob-next" class="btn sm">Continue</button>
+        </div>
+      </section>
+
+      <section class="ob-step" data-step="3">
+        <h2>You're set</h2>
+        <p class="ob-lede">Open any Instagram profile and Sprill scores it against your ICP.
+        Capture the good ones, work down the ranked queue, and send when you're ready.</p>
+        <ul class="ob-list">
+          <li><b>Profile</b> — the profile you're viewing, scored with its reasons</li>
+          <li><b>Queue</b> — everything you captured, best fit first. Vet it, then ★ it</li>
+          <li><b>Pipeline</b> — who you vetted, who you messaged, and who read you</li>
+        </ul>
+        <p class="ob-lede fine warn">Sprill writes the message; you read it and press Send. Every
+        message is confirmed by you — content and recipient — before it leaves. Sending from the
+        panel is opt-in and ships off; turning it on is a choice you make with the risk spelled out.</p>
+        <button id="ob-done" class="btn">Start prospecting</button>
+      </section>
+
+      <button id="ob-skip" class="ob-skip">Skip setup</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="panel.js"></script>
+</body>
+</html>

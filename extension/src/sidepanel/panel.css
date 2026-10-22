@@ -1,0 +1,286 @@
+:root {
+  --ink: #1f2328;
+  --mut: #6b7280;
+  --line: #e5e7eb;
+  --bg: #ffffff;
+  --soft: #f6f7f9;
+  --accent: #111827;
+  --good: #147a4b;
+  --warn: #8a6d1f;
+  --danger: #b3261e;
+  --brand: #0e6e63; /* accent, used sparingly. NOT an Instagram palette hex — see generate.py */
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px; color: var(--ink); background: var(--bg);
+  display: flex; flex-direction: column; min-height: 100vh;
+}
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
+}
+.brand { font-weight: 800; letter-spacing: .5px; font-size: 12px; }
+.quota { font-size: 11px; color: var(--mut); border: 1px solid var(--line); border-radius: 12px; padding: 2px 9px; white-space: nowrap; }
+.quota.blocked { color: #fff; background: var(--danger); border-color: var(--danger); }
+
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tab {
+  /* Four tabs in a side panel that can be 320px wide, and one carries a count
+     badge. Without nowrap, "Pipeline" + its badge wrapped onto a second line and
+     pushed the whole bar to double height. min-width:0 lets flex actually shrink
+     them instead of honouring the text's intrinsic width. */
+  flex: 1 1 0; min-width: 0; white-space: nowrap; position: relative;
+  background: none; border: 0; padding: 9px 2px; font-size: 11px;
+  color: var(--mut); cursor: pointer; border-bottom: 2px solid transparent;
+}
+.tab.is-active { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
+
+main { flex: 1; overflow: auto; }
+.tabpanel { display: none; padding: 12px; }
+.tabpanel.is-active { display: block; }
+
+.empty { color: var(--mut); text-align: center; padding: 28px 12px; }
+.muted { color: var(--mut); font-size: 12px; }
+.fine { color: var(--mut); font-size: 11px; line-height: 1.5; margin-top: 14px; }
+
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.row-gap { display: flex; align-items: center; gap: 6px; }
+
+.p-name { font-weight: 700; }
+.p-sub { color: var(--mut); font-size: 12px; }
+.score {
+  margin-left: auto; text-align: center; border: 1px solid var(--line);
+  border-radius: 8px; padding: 4px 8px; min-width: 54px;
+}
+.score b { display: block; font-size: 18px; line-height: 1; }
+.score span { font-size: 9px; color: var(--mut); text-transform: uppercase; letter-spacing: .5px; }
+.score.high b { color: var(--good); }
+.score.low b { color: var(--mut); }
+
+ul.reasons { list-style: none; margin: 10px 0 0; padding: 0; font-size: 12px; }
+ul.reasons li { position: relative; padding-left: 16px; margin: 4px 0; color: #374151; }
+ul.reasons li::before { content: "✓"; position: absolute; left: 0; color: var(--good); }
+ul.reasons li.con::before { content: "!"; color: var(--warn); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip {
+  font-size: 11px; border: 1px solid var(--line); border-radius: 12px;
+  padding: 3px 9px; background: var(--soft); color: #374151; cursor: default;
+  word-break: break-all;
+}
+.chip a { color: inherit; }
+.chip.toggle { cursor: pointer; user-select: none; }
+.chip.toggle.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.btn {
+  border: 1px solid var(--ink); background: var(--ink); color: #fff;
+  border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600;
+  cursor: pointer; width: 100%;
+}
+.btn.sm { padding: 6px 10px; width: auto; }
+.btn.ghost { background: #fff; color: var(--ink); }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn + .btn { margin-top: 8px; }
+
+.field { display: block; margin-bottom: 12px; }
+.field > span { display: block; font-size: 12px; color: var(--mut); margin-bottom: 5px; }
+input[type="text"], textarea, select {
+  width: 100%; border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px; font: inherit; color: var(--ink); background: #fff; resize: vertical;
+}
+hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+
+.q-item { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px dashed var(--line); }
+.q-item:last-child { border-bottom: 0; }
+.q-score { width: 32px; height: 32px; border-radius: 7px; background: var(--soft); border: 1px solid var(--line);
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.q-score.high { color: var(--good); }
+.q-main { min-width: 0; flex: 1; }
+.q-main .n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-actions { display: flex; gap: 5px; flex: 0 0 auto; }
+.icon-btn { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 4px 7px; font-size: 11px; cursor: pointer; }
+.icon-btn.danger { color: var(--danger); border-color: #f0c9c6; }
+
+.draft-box { margin-top: 10px; }
+.draft-box textarea { min-height: 92px; }
+.sent-note { color: var(--good); font-size: 11px; margin-top: 8px; }
+.saved-badge { color: var(--good); font-size: 12px; font-weight: 600; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+  background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 8px;
+  font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.2); z-index: 50; max-width: 90%;
+}
+select.inline { width: auto; padding: 5px 8px; }
+/* Bound inputs sit inline in the filter row, six to a row on the Queue, so they
+   have to be narrow enough not to wrap on a 360px side panel. 4.5ch fits "1.5m". */
+/* Six bound inputs plus two selects have to fit a 320px panel. 4.5ch holds
+   "1.5m"; the placeholder is "min"/"max" so it must not be clipped, which is why
+   these are centred and padded tight rather than made wider. */
+input.filt-num { width: 5.5ch; padding: 5px 4px; text-align: center; font-size: 12px; }
+.filt-row {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 6px 10px; margin-bottom: 10px;
+}
+/* Each field group (label + min + dash + max) wraps as ONE unit and never shrinks.
+   min-width:0 here was my first attempt and it did the opposite of what I wanted:
+   it let the label shrink below its content, which clipped the `max` input inside
+   it. flex:0 0 auto is the fix — groups move to the next line intact instead. */
+.filt-row label { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+/* Only the Reels select needs capping — it shares a row with the Posts bounds.
+   Sort sits on the last row with room to spare, and capping it clipped
+   "by outlier strength" down to "by outlier stren". Cap by id, not by type. */
+.filt-row select[id$="-outlier"] { max-width: 13ch; }
+.switch-inline { gap: 4px; }
+.switch-row { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 12px; }
+.switch-row input { margin-top: 2px; flex: 0 0 auto; }
+.fine.warn { color: var(--warn); }
+.btn.send { background: var(--brand); border-color: var(--brand); }
+
+/* active sending account */
+.account-bar { font-size: 11px; color: var(--mut); background: var(--soft);
+  border-bottom: 1px solid var(--line); padding: 5px 12px; }
+.account-bar b { color: var(--ink); }
+.account-bar.none { color: var(--warn); }
+
+/* pipeline */
+.pill { font-size: 10px; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 1px 7px; color: var(--mut); }
+
+/* ---- Pipeline stat strip (0.16.0) ----
+   Four chips: icon, number, label. Each is also the segment filter, so the
+   number you are reading is the list you get when you press it. A chip with
+   nothing in it shows an em-dash and dims — a row of zeroes reads as failure,
+   a dash reads as "not yet". */
+.pl-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+.pl-stat {
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center;
+  background: transparent; color: inherit; cursor: pointer; font: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.pl-stat:hover { background: var(--soft); }
+.pl-stat .pl-ico { font-size: 13px; line-height: 1; }
+.pl-stat b { display: block; font-size: 18px; line-height: 1.15; }
+.pl-stat span:last-child { font-size: 9px; color: var(--mut); text-transform: uppercase; letter-spacing: .3px; line-height: 1.2; }
+.pl-stat.is-active { border-color: var(--brand); background: var(--soft); }
+.pl-stat.is-active b { color: var(--brand); }
+.pl-stat.is-empty b { color: var(--mut); }
+
+/* Row state marks: ★ vetted, ☑ messaged. These carry what used to be carried by
+   which tab you happened to be looking at. */
+.q-marks { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1; }
+.q-mark { font-size: 11px; color: var(--line); }
+.q-mark.is-on { color: var(--brand); }
+.q-note { font-size: 11px; margin-top: 1px; }
+/* Group headers in the cleanup review. Was .fu-head, whose rule left with the
+   Outreach tab — the review then rendered its two headers unstyled. */
+.cull-head { font-size: 12px; font-weight: 700; color: var(--ink); display: flex;
+  align-items: center; gap: 8px; margin: 10px 0 6px; }
+.icon-btn.star { font-size: 13px; }
+/* Absolutely positioned, so the count takes NO inline width. Inline it added ~16px
+   to the tab, which at side-panel width pushed the badge on top of the label. A tab
+   count is an annotation on the tab, not part of its label, and positioning it says so. */
+.tab .badge {
+  position: absolute; top: 2px; right: 0;
+  background: var(--brand); color: #fff; border-radius: 9px;
+  font-size: 8.5px; line-height: 12px; min-width: 12px; height: 12px;
+  padding: 0 2px; font-weight: 700; text-align: center;
+}
+
+/* batch send bar */
+.batch-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.batch-bar select { flex: 1; }
+.sel-all { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--mut); margin: 4px 0 8px; cursor: pointer; }
+
+/* metrics */
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.metric { border: 1px solid var(--line); border-radius: 10px; padding: 12px; text-align: center; }
+.metric b { display: block; font-size: 22px; line-height: 1.1; }
+.metric span { font-size: 11px; color: var(--mut); text-transform: uppercase; letter-spacing: .4px; }
+.metric em { display: block; font-size: 11px; color: var(--mut); font-style: normal; margin-top: 3px; }
+.icon-btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+#batch-progress:not(:empty) { margin-bottom: 8px; }
+
+/* queue checkbox */
+.q-check { flex: 0 0 auto; width: 16px; height: 16px; }
+
+/* warm-up card */
+.card.warm { background: var(--soft); }
+.warm-bars { display: flex; align-items: flex-end; gap: 3px; height: 46px; margin: 10px 0 6px; }
+.warm-bars .bar { flex: 1; background: var(--brand); border-radius: 2px 2px 0 0; min-height: 2px; opacity: .85; }
+.warm-bars .bar.empty { background: var(--line); opacity: 1; }
+.warm-bars .bar.today { outline: 1px solid var(--ink); }
+
+/* grid outlier chips (clickable — open the post) */
+.chip.outlier { cursor: pointer; border-color: var(--brand); font: inherit; font-size: 11px; }
+.chip.outlier:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* recorder card */
+.rec-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 8px 0 10px; background: var(--soft); }
+.rec-card .fine { margin: 6px 0 10px; }
+.rec-card .row-gap { margin-bottom: 2px; }
+.rec-card select { flex: 1; }
+.rec-bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 10px 0 8px; }
+.rec-bar i { display: block; height: 100%; width: 0; background: var(--brand); border-radius: 2px; transition: width .4s linear; }
+#rec-live .row-between { margin-bottom: 2px; }
+#rec-pending { margin-top: 4px; }
+#rec-pending .row-gap { margin-top: 6px; }
+#rec-progress:not(:empty) { margin: 8px 0 2px; }
+.rec-card .fine.warn { margin: 10px 0 0; }
+
+/* templates */
+.tpl-editor { margin-top: 8px; }
+.tpl-editor input, .tpl-editor textarea { margin-bottom: 6px; }
+.tpl-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.tpl-row:last-child { border-bottom: 0; }
+.tpl-row .tpl-name { font-weight: 600; flex: 1; }
+
+/* first-run onboarding overlay */
+.ob {
+  position: fixed; inset: 0; z-index: 60; background: var(--bg);
+  display: flex; flex-direction: column; overflow: auto;
+}
+.ob[hidden] { display: none; }
+.ob-card { padding: 20px 16px 24px; margin: auto 0; }
+.ob-dots { display: flex; gap: 5px; margin-bottom: 18px; }
+.ob-dots i { flex: 1; height: 3px; border-radius: 2px; background: var(--line); }
+.ob-dots i.on { background: var(--ink); }
+.ob-step { display: none; }
+.ob-step.is-active { display: block; }
+.ob-step h2 { font-size: 17px; margin: 0 0 6px; letter-spacing: -.01em; }
+.ob-lede { color: var(--mut); font-size: 12px; line-height: 1.55; margin: 0 0 14px; }
+.ob-lede code { background: var(--soft); border-radius: 4px; padding: 1px 4px; font-size: 11px; }
+.ob-presets { display: flex; flex-direction: column; gap: 8px; }
+.ob-preset {
+  text-align: left; width: 100%; cursor: pointer;
+  border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 11px 12px;
+  font: inherit; color: var(--ink);
+}
+.ob-preset:hover { border-color: var(--ink); }
+.ob-preset b { display: block; font-size: 13px; margin-bottom: 2px; }
+.ob-preset span { display: block; color: var(--mut); font-size: 11px; }
+.ob-nav { display: flex; gap: 6px; margin-top: 14px; }
+.ob-nav .btn { width: auto; }
+.ob-nav .btn + .btn { margin-top: 0; }
+.ob-list { list-style: none; margin: 0 0 14px; padding: 0; font-size: 12px; color: #374151; }
+.ob-list li { position: relative; padding-left: 15px; margin: 6px 0; }
+.ob-list li::before { content: "•"; position: absolute; left: 0; color: var(--mut); }
+.ob-skip {
+  display: block; margin: 18px auto 0; background: none; border: 0;
+  color: var(--mut); font-size: 11px; text-decoration: underline; cursor: pointer;
+}
+
+/* sent log */
+.sent-item { border: 1px solid var(--line); border-radius: 9px; padding: 10px; margin-bottom: 9px; }
+.sent-item .msg { color: #374151; font-size: 12px; margin-top: 5px; white-space: pre-wrap; }
+.sent-item .when { color: var(--mut); font-size: 11px; }
+
+/* 0.17.0 — the draft box's Open DM row and the per-message send opt-in. */
+label.chk { display: flex; align-items: center; gap: 6px; color: var(--mut); font-size: 12px; cursor: pointer; }
+label.chk input { margin: 0; }
+label.sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; margin-top: 8px; }

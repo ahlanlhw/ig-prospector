@@ -1,0 +1,11 @@
+# Normalise line endings in the repo so a Windows checkout does not show every
+# tracked file as modified. Committed content stays LF; working copies get the
+# platform default. See core.autocrlf.
+* text=auto
+
+# Never touch these.
+*.png binary
+*.ico binary
+*.zip binary
+*.crx binary
+*.tar binary
